@@ -47,11 +47,12 @@ void button(int pin){
 }
 
 // Create function control
-void callFunction(char * functionName, char * type){
+void callFunction(char * functionName, char * type, char * label){
 
   // Set in callFunction array
   callFunctionNames[functions_index] = functionName;
   callFunctionTypes[functions_index] = type;
+  callFunctionLabels[functions_index] = label;
   functions_index++;
 
 }
@@ -117,14 +118,41 @@ virtual void root_answer() {
     // Function calls UI
     for (int i = 0; i < functions_index; i++) {
 
-      if (callFunctionTypes[i] == "push") {
+      if (callFunctionTypes[i] == "button") {
 
         addToBuffer("<div class=\"row\">");
         addToBuffer("<div class=\"col-md-3\"><button class=\"btn btn-block btn-lg btn-primary\" id='fn_push_");
         addToBuffer(callFunctionNames[i]);
         addToBuffer("'>");
-        addToBuffer(callFunctionNames[i]);
+        addToBuffer(callFunctionLabels[i]);
         addToBuffer("</button></div>");
+        addToBuffer("</div>");
+
+      }
+
+      
+      if (callFunctionTypes[i] == "slider") {
+        int defaultMax;
+
+        #if defined(ESP8266)
+        defaultMax = 1023;
+        #else
+        defaultMax = 255;
+        #endif
+
+        //TODO: add a callFunctionMins and callFunctionMaxes for passing slider range
+        
+        addToBuffer("<div class=\"row\">");
+        addToBuffer("<div class=\"col-md-2\">");
+        
+        addToBuffer("<label>");
+        addToBuffer(callFunctionLabels[i]);
+        addToBuffer(": <span class=\"value\"></span></label>");
+      
+        addToBuffer("<input type='range' value='0' max='359' min='0' id='fn_push_");
+       
+        addToBuffer(callFunctionNames[i]);
+        addToBuffer("'></div>");
         addToBuffer("</div>");
 
       }
@@ -134,9 +162,9 @@ virtual void root_answer() {
     for (int i = 0; i < sliders_index; i++) {
       addToBuffer("<div class=\"row\">");
       #if defined(ESP8266)
-      addToBuffer("<div class=\"col-md-2\"><input type='range' value='0' max='1023' min='0' step='5' id='slider");
+      addToBuffer("<div class=\"col-md-2\"><input type='range' value='0' max='1023' min='0' id='slider");
       #else
-      addToBuffer("<div class=\"col-md-2\"><input type='range' value='0' max='255' min='0' step='5' id='slider");
+      addToBuffer("<div class=\"col-md-2\"><input type='range' value='0' max='255' min='0' id='slider");
       #endif
       addToBuffer(sliders[i]);
       addToBuffer("'></div>");
@@ -159,6 +187,9 @@ virtual void root_answer() {
 
     addToBuffer("<script>$( document ).ready(function() {");
 
+    //Set default value to label for all sliders on page load    
+    addToBuffer("$(\"input[type='range']\").each(function() {$(this).siblings('label').find('.value').html($(this).val()); });");
+
     // Buttons JavaScript
     for (int i = 0; i < buttons_index; i++) {
       addToBuffer("$('#btn_on");
@@ -177,9 +208,14 @@ virtual void root_answer() {
     for (int i = 0; i < functions_index; i++) {
       addToBuffer("$('#fn_push_");
       addToBuffer(callFunctionNames[i]);
-      addToBuffer("').click(function() {$.getq('queue','/");
+      addToBuffer("').mouseup(function() {var val = $('#fn_push_");
       addToBuffer(callFunctionNames[i]);
-      addToBuffer("');});");
+      addToBuffer("').val(); ");
+      addToBuffer("$(this).siblings('label').find('.value').html(val); ");
+      addToBuffer("$.getq('queue','/");
+      addToBuffer(callFunctionNames[i]);
+      addToBuffer("?params=' + val");
+      addToBuffer("); });");
     }
 
     // Sliders JavaScript
@@ -222,6 +258,7 @@ private:
   // Functions array
   char * callFunctionNames[10];
   char * callFunctionTypes[10];
+  char * callFunctionLabels[10];
   int functions_index;
 
   // Buttons array
@@ -236,3 +273,4 @@ private:
 };
 
 #endif
+
